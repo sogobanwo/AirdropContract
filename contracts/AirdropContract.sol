@@ -7,27 +7,26 @@ contract AirdropContract {
     uint numberOfEntries;
     address owner;
     uint numOfWinners;
-    uint prizePerWinner;
-
+    uint totalNumberOfPossibleEntries
 
     event SuccessfulRegistration(address user, bool registrationStatus);
 
-    constructor(){
-        owner = msg.sender;
-    }
-
     mapping (address => bool) isRegistered;
-
+    mapping (address => bool) hasParticipated;
     mapping  (address => uint) participantsPoints;
 
+    constructor(uint _totalNumberOfPossibleEntries, uint _numOfWinners){
+        require(_numOfWinners <  _totalNumberOfPossibleEntries, "Winners can't be less than entries");
+        owner = msg.sender;
+        totalNumberOfEntries = _totalNumberOfPossibleEntries
+        numOfWinners = _numOfWinners
+    }
+
     function onlyOwner() private view  {
-
         require(msg.sender == owner, "Only Owner can trigger Distribution");
-
     }
 
     function registerUser() external {
-
         require(msg.sender != address(0), "address zero detected");
 
         require(isRegistered[msg.sender] == false, "You are already registered");
@@ -36,8 +35,6 @@ contract AirdropContract {
 
         participants.push(msg.sender);
         
-        emit SuccessfulRegistration(msg.sender ,true);
-
     }
 
     function pickNumberGame(uint[3] _numberPrediction) external  {
@@ -46,7 +43,9 @@ contract AirdropContract {
 
         require(isRegistered[msg.sender] == true, "You are need to be a registered user");
 
-        uint8 _matchingPredictions = 0
+        require(hasParticipated[msg.sender] == false, "You can't participate twice");
+
+        uint8 _matchingPredictions = 0;
 
         for (uint256 i = 0; i < _numberPrediction.length; i++) {
             if(_numberPrediction[i] == randomResult1) {
@@ -70,7 +69,7 @@ contract AirdropContract {
 
         numberOfEntries++;
 
-        if(numberOfEntries == 10){
+        if(numberOfEntries == _totalNumberOfPossibleEntries){
            triggerDistribution();
         }
 
@@ -80,7 +79,6 @@ contract AirdropContract {
 
         uint totalPrizePool = numOfWinners * prizePerWinner;
 
-
     }
 
     function triggerDistribution() private view  {
@@ -89,15 +87,9 @@ contract AirdropContract {
 
         require(numOfWinners > 0 && numOfWinners <= numberOfEntries, "Invalid number of winners");
 
-        requestRandomness(keyHash, fee);
-
+        IVRFv2Consumer.requestRandomness(keyHash, fee);
     }
 
-    function triggerDistribution() private view  {
-
-        onlyOwner() ;
-
-    }
 
     function setNumberOfWinnerAndPrizePerPerson(uint _newNumberOfWinners, uint _prizePerWinner) external {
 
